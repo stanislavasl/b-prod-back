@@ -8,44 +8,61 @@ import lt.seb.api.repositories.BundleRepository;
 import lt.seb.api.repositories.ProductRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
 @AllArgsConstructor
 public class BundleService {
-    private static final Long ID = 2L;
     private final BundleRepository bundleRepository;
     private final ProductRepository productRepository;
     private final RulesService rulesService;
     private final CustomerService customerService;
 
-    public BundleDTO createBundle(Long customerId){
-        BundleDTO bundleDTO = new BundleDTO();
+    public BundleDTO showBundle(Long customerId) {
+       Bundle bundle = createBundle(customerId);
+       return BundleDTO.builder()
+               .bundleName(bundle.getBundleName())
+               .accountName(productRepository.getById(bundle.getAccount()).getProductName())
+               .creditCardName(checkIsNull(bundle).get(0))
+               .debitCardName(checkIsNull(bundle).get(1))
+               .build();
+    }
+
+    public Bundle createBundle(Long customerId) {
+        Bundle bundle = new Bundle();
+        var level = 0;
+
         Optional<Customer> customer = customerService.getCustomerByIdOptional(customerId);
 
-        if(customer.isPresent() && customer.get().getIsStudent()){
-            bundleDTO = BundleDTO.builder()
-                    .bundleName(bundleRepository.getById(ID).getBundleName())
-                    .accountName(productRepository.getById(bundleRepository.getById(ID).getAccount()).getProductName())
-                    .creditCardName(productRepository.getById(bundleRepository.getById(ID).getCreditCard()).getProductName())
-                    .debitCardName(productRepository.getById(bundleRepository.getById(ID).getDebitCard()).getProductName())
-                    .build();
-        }
-
-        var level = 0;
-        if(customer.isPresent()){
+        if (customer.isPresent()) {
+            if (customer.get().getIsStudent()) {
+               bundle = bundleRepository.getById(2L);
+            }
             level = rulesService.getLevelForCustomer(customer.get());
+            bundle = level == 0 ? bundleRepository.getById(1L) : bundleRepository.findBundleByValue(level);
         }
-        Bundle bundle = bundleRepository.findBundleByValue(level, ID);
-        if(customer.isPresent() && !customer.get().getIsStudent()){
-           bundleDTO = BundleDTO.builder()
-                    .bundleName(bundle.getBundleName())
-                    .accountName(productRepository.getById(bundle.getAccount()).getProductName())
-                    .creditCardName(productRepository.getById(bundle.getCreditCard()).getProductName())
-                    .debitCardName(productRepository.getById(bundle.getDebitCard()).getProductName())
-                    .build();
-        }
-        return bundleDTO;
+        return bundle;
+    }
+
+    private List<String> checkIsNull(Bundle bundle) {
+        List<String> listOfValues = new ArrayList<>();
+
+        var creditCardId = Objects.isNull(bundle.getCreditCard()) ? null : bundle.getCreditCard();
+        var creditCard = Objects.isNull(creditCardId) ? null : productRepository.getById(creditCardId).getProductName();
+        listOfValues.add(creditCard);
+
+        var debitCardId = Objects.isNull(bundle.getDebitCard()) ? null : bundle.getDebitCard();
+        var debitCard = Objects.isNull(debitCardId) ? null : productRepository.getById(debitCardId).getProductName();
+        listOfValues.add(debitCard);
+
+        return listOfValues;
+    }
+
+    public List<Bundle> getBundles() {
+        return bundleRepository.findAll();
     }
 }
+

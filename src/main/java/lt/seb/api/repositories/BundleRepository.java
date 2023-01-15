@@ -10,6 +10,6 @@ import java.util.List;
 @Repository
 public interface BundleRepository extends JpaRepository<Bundle, Long> {
 
-    @Query(value = "select * from bundles b where b.bundle_value = ?1 and not b.bundle_id = ?2", nativeQuery = true)
-    Bundle findBundleByValue(Integer bandleValue, Long bundleId);
+    @Query(value = "select * from bundles b where b.bundle_value = ?1", nativeQuery = true)
+    Bundle findBundleByValue(Integer bandleValue);
 }
